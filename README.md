@@ -15,10 +15,74 @@ Boolean Functions
 <img width="575" height="65" alt="image" src="https://github.com/user-attachments/assets/04c2d90c-0b6b-4b35-b603-d0e10e1e4f00" />
 
 ## Design / RTL Program
-
+```
+module shift_reg (
+    input  wire       clk,   // clock
+    input  wire       rst,   // asynchronous active-high reset
+    input  wire       sin,   // serial input
+    output wire       sout,  // serial output (MSB, about to shift out)
+    output reg  [3:0] Q      // parallel output
+);
+    always @(posedge clk or posedge rst) begin
+        if (rst)
+            Q <= 4'b0000;
+        else
+            Q <= {Q[2:0], sin};   // shift left, sin enters at LSB
+    end
+ 
+    assign sout = Q[3];
+endmodule
+```
 
 ## **Testbench Program
-
+module tb6;
+    reg  clk, rst, sin;
+    wire sout;
+    wire [3:0] Q;
+ 
+    // Instantiate the shift register
+    shift_reg uut (
+        .clk(clk),
+        .rst(rst),
+        .sin(sin),
+        .sout(sout),
+        .Q(Q)
+    );
+ 
+    // ---- Clock generation: 10 time-unit period ----
+    initial clk = 0;
+    always #5 clk = ~clk;
+ 
+    initial begin
+        // ---- VCD dump setup ----
+        $dumpfile("shift_reg.vcd");   // name of the VCD file to be generated
+        $dumpvars(0, tb6);              // dump all signals in this testbench hierarchy
+ 
+        $monitor("Time=%0t rst=%b clk=%b sin=%b | Q=%b sout=%b",
+                  $time, rst, clk, sin, Q, sout);
+ 
+        // ---- Apply asynchronous reset ----
+        rst = 1; sin = 0;
+        #7  rst = 0;
+ 
+        // ---- Serially shift in the bit pattern 1 0 1 1 ----
+        @(negedge clk); sin = 1;
+        @(negedge clk); sin = 0;
+        @(negedge clk); sin = 1;
+        @(negedge clk); sin = 1;
+ 
+        // ---- Hold sin = 0 and observe the pattern shift out ----
+        @(negedge clk); sin = 0;
+        @(negedge clk);
+        @(negedge clk);
+ 
+        // ---- Apply reset again mid-simulation ----
+        @(negedge clk); rst = 1;
+        @(negedge clk); rst = 0; sin = 1;
+ 
+        #20 $finish;
+    end
+endmodule
 
 
 ## Truth Table
@@ -76,35 +140,15 @@ The waveform should agree with the truth table.
 
 ## Expected Result
 
-The 2:1 Multiplexer and 1:2 Demultiplexer were realized using Verilog HDL:
+<img width="760" height="683" alt="Screenshot 2026-11-23 095329" src="https://github.com/user-attachments/assets/8bf9dff7-b52e-4af9-b311-ef2b874f439e" />
 
-•	Y = S'.A + S.B
-•	Y0 = S'.D, Y1 = S.D
-
-The design was compiled and simulated using Synopsys VCS, and the functionality was verified using DVE waveform analysis, matching the expected truth table.
 
 ## Output
+<img width="1915" height="935" alt="Screenshot 2026-11-23 100022" src="https://github.com/user-attachments/assets/7ee4d459-a70a-4640-97be-e11e7a856549" />
 
 
 ## Viva-Voce Questions
 
-•	What is a Multiplexer, and why is it called a 'data selector'?
-
-•	What is a Demultiplexer, and how does it differ functionally from a Multiplexer?
-
-•	How many select lines are required for an 8:1 MUX and a 1:8 DEMUX?
-
-•	Write the Boolean expression for a 4:1 Multiplexer.
-
-•	What is the purpose of a Verilog testbench?
-
-•	Why is a VCD file generated, and what does $dumpvars(0, tb) do?
-
-•	What is the purpose of ./simv?
-
-•	What is the difference between simulation and synthesis?
-
-•	How would you extend the 2:1 MUX design to a 4:1 MUX using two 2:1 MUXes?
 
 ## Result
 
